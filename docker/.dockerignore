@@ -1,0 +1,67 @@
+# Node modules
+**/node_modules
+**/npm-debug.log
+**/yarn-error.log
+**/pnpm-debug.log
+
+# Build outputs
+**/dist
+**/.next
+**/out
+**/build
+
+# Environment files (will be passed via docker-compose)
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Git
+**/.git
+**/.gitignore
+
+# IDE
+**/.vscode
+**/.idea
+**/*.swp
+**/*.swo
+**/*~
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# Testing
+**/coverage
+**/.nyc_output
+**/test-results
+
+# Logs
+**/logs
+**/*.log
+
+# Temporary files
+**/tmp
+**/temp
+
+# Docker files (no need to copy these into the image)
+**/Dockerfile
+**/docker-compose.yml
+**/.dockerignore
+
+# Documentation
+**/*.md
+!server/Readme.md
+
+# Client specific
+client/.next
+client/out
+client/node_modules
+
+# Server specific
+server/dist
+server/node_modules
+server/downloads/*
+!server/downloads/.gitkeep
+server/public/temp/*
+!server/public/temp/.gitkeep
+

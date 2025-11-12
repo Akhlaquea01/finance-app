@@ -1,0 +1,67 @@
+# Render Docker Deployment Configuration
+# Deploys unified Docker container with both client and server
+
+services:
+  # Combined Frontend + Backend Service (Docker)
+  - type: web
+    name: finance-management-app
+    runtime: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/healthcheck
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URL
+        sync: false
+      - key: ACCESS_TOKEN_SECRET
+        sync: false
+      - key: REFRESH_TOKEN_SECRET
+        sync: false
+      - key: ACCESS_TOKEN_EXPIRY
+        value: 1d
+      - key: REFRESH_TOKEN_EXPIRY
+        value: 10d
+      - key: CORS_ORIGIN
+        sync: false
+      - key: SOCKET_ORIGIN
+        value: "*"
+      - key: PORT
+        value: 10000
+      - key: NEXT_PUBLIC_API_URL
+        value: /api/v1
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: EMAIL_ADDRESS
+        sync: false
+      - key: EMAIL_PASS_CODE
+        sync: false
+      - key: GOOGLE_GENAI_API
+        sync: false
+      - key: GOOGLE_GENAI_MODEL
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: OPENROUTER_API
+        sync: false
+      - key: OPENROUTER_AI_MODEL
+        sync: false
+      - key: AI_MODEL
+        sync: false
+      - key: PROMPT
+        sync: false
+      - key: TELEGRAM_BOT_ENABLE
+        sync: false
+      - key: YOUR_TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: SESSION_DOMAIN
+        sync: false
+
