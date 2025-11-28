@@ -72,7 +72,7 @@ export default function AccountsPage() {
       toast.success("Account deleted successfully")
       fetchAccounts() // Auto-refresh after deletion
     } catch (error) {
-      console.log(error, "error")
+      console.error('Error deleting account:', error)
       toast.error("Failed to delete account")
     }
   }
@@ -157,9 +157,9 @@ export default function AccountsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <EditAccountDialog 
-                            account={account} 
-                            onSuccess={fetchAccounts} 
+                          <EditAccountDialog
+                            account={account}
+                            onSuccess={fetchAccounts}
                           />
                           <Button variant="ghost" size="icon" onClick={() => handleDeleteAccount(account._id)}>
                             <Trash className="h-4 w-4" />

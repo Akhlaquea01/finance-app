@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from "react"
 import { Edit, MoreVertical, Plus, Trash } from "lucide-react"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
 import { Button } from "@/components/ui/button"
@@ -37,33 +37,26 @@ export default function CategoriesPage() {
   const fetchCategories = useCallback(async (retryCount = 0) => {
     try {
       setLoading(true);
-      console.log(`Fetching categories (attempt ${retryCount + 1})...`);
       const response = await fetchCategory();
-      console.log('Categories API response:', response);
-      
+
       // Handle different response structures
       const categoriesData = response?.data?.categories || response?.data || [];
-      console.log('Categories data:', categoriesData);
-      
+
       if (Array.isArray(categoriesData) && categoriesData.length > 0) {
         setCategories(categoriesData);
-        console.log('Categories loaded successfully');
       } else {
-        console.warn('No categories found or invalid data structure');
         setCategories([]);
-        
+
         // Retry once if no categories found
         if (retryCount === 0) {
-          console.log('Retrying category fetch...');
           setTimeout(() => fetchCategories(1), 1000);
         }
       }
     } catch (error) {
       console.error('Failed to fetch categories:', error);
-      
+
       // Retry once on error
       if (retryCount === 0) {
-        console.log('Retrying category fetch after error...');
         setTimeout(() => fetchCategories(1), 2000);
       } else {
         toast.error("Failed to fetch categories");
@@ -122,40 +115,39 @@ export default function CategoriesPage() {
           <TableBody>
             {loading
               ? Array(5)
-                  .fill(0)
-                  .map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Skeleton className="h-4 w-[100px]" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-[80px]" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-4 w-[60px]" />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Skeleton className="h-8 w-8 ml-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ))
+                .fill(0)
+                .map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Skeleton className="h-4 w-[100px]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-[80px]" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-[60px]" />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Skeleton className="h-8 w-8 ml-auto" />
+                    </TableCell>
+                  </TableRow>
+                ))
               : categories.length === 0
-              ? (
+                ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                       No categories found. Create your first category to get started.
                     </TableCell>
                   </TableRow>
                 )
-              : categories.map((category) => (
+                : categories.map((category) => (
                   <TableRow key={category._id}>
                     <TableCell>{category.name}</TableCell>
                     <TableCell
-                      className={`${
-                        category.transactionType === "debit"
+                      className={`${category.transactionType === "debit"
                           ? "text-red-600"
                           : "text-green-600"
-                      }`}
+                        }`}
                     >
                       {category.transactionType === "debit"
                         ? "Debit"

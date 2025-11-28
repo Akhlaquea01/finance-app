@@ -90,4 +90,20 @@ userSchema.methods.generateRefreshToken = function () {
     );
 };
 
-export const User = mongoose.model("User", userSchema);
+export interface IUser extends mongoose.Document {
+    username: string;
+    email: string;
+    fullName: string;
+    avatar: string;
+    coverImage?: string;
+    watchHistory: mongoose.Types.ObjectId[];
+    password: string;
+    refreshToken?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    isPasswordCorrect(password: string): Promise<boolean>;
+    generateAccessToken(): string;
+    generateRefreshToken(): string;
+}
+
+export const User = mongoose.model<IUser>("User", userSchema);

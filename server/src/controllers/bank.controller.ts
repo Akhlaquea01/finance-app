@@ -279,7 +279,7 @@ const updateTransaction = async (req, res) => {
         }
 
         // Get the old account details
-        const oldAccount = oldTransaction.accountId;
+        const oldAccount = oldTransaction.accountId as any;
         if (oldAccount.status !== 'active') {
             await session.abortTransaction();
             session.endSession();
@@ -585,7 +585,7 @@ const getTransactions = async (req, res) => {
 
         // Transform the transactions to rename categoryId to category and accountId to account
         const transformedTransactions = transactions.map(transaction => {
-            const transactionObj = transaction.toObject();
+            const transactionObj: any = transaction.toObject();
             // Handle null or missing category
             if (!transactionObj.categoryId) {
                 transactionObj.category = othersCategory?.toObject() || {
@@ -927,7 +927,7 @@ const getIncomeExpenseSummary = async (req, res) => {
 
         const groupedData: Record<string, GroupedData> = {};
 
-        transactions.forEach((transaction) => {
+        transactions.forEach((transaction: any) => {
             let key;
             const transactionDate = new Date(transaction.date);
             const isCreditCard = transaction.accountId?.accountType === "credit_card";
@@ -1019,7 +1019,7 @@ const getInvestmentsByUser = async (req, res) => {
             .sort({ date: -1 });
 
         // Filter transactions for investment categories or those with tags
-        const investmentTransactions = transactions.filter((txn) => {
+        const investmentTransactions = transactions.filter((txn: any) => {
             const isInvestment =
                 txn.categoryId?.name?.toLowerCase() === "investment"; // Check for "investment" category
             const hasTags = txn.tags && txn.tags.length > 0; // Check if transaction has tags
@@ -1257,7 +1257,7 @@ const transferMoney = async (req, res) => {
         // If any error occurs, abort the transaction
         await session.abortTransaction();
         session.endSession();
-        
+
         return res.status(500).json(
             new ApiResponse(500, undefined, "Something went wrong", error)
         );

@@ -113,7 +113,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
       // Fetch all data in parallel - only fetch what's not cached
       const promises = [];
-      
+
       // Always fetch dynamic data (accounts, transactions, income/expense)
       promises.push(fetchAccountList());
       promises.push(fetchAllTransaction("all", startOfMonth(new Date()), new Date()));
@@ -133,7 +133,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
 
       const results = await Promise.all(promises);
-      
+
       // Process results with proper indexing
       let resultIndex = 0;
       const accountsRes = results[resultIndex++];
@@ -170,7 +170,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       setError("Failed to fetch data");
       console.error("Error in refreshData:", err);
-      
+
       // Try to load categories from cache as fallback
       const cachedCategories = cache.get(CACHE_KEYS.CATEGORIES);
       if (cachedCategories) {
@@ -183,40 +183,32 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const refreshCategories = useCallback(async (retryCount = 0) => {
     try {
-      console.log(`Refreshing categories (attempt ${retryCount + 1})...`);
       const response = await fetchCategory();
-      console.log("Categories API response:", response);
-      
+
       const fetchedCategories = response?.data?.categories || response?.data || [];
-      console.log("Fetched categories:", fetchedCategories);
-      
+
       if (Array.isArray(fetchedCategories) && fetchedCategories.length > 0) {
         setCategories(fetchedCategories);
         cache.set(CACHE_KEYS.CATEGORIES, fetchedCategories);
-        console.log("Categories updated successfully");
       } else {
-        console.warn("No categories found or invalid data structure");
         setCategories([]);
-        
+
         // Retry once if no categories found
         if (retryCount === 0) {
-          console.log("Retrying category fetch...");
           setTimeout(() => refreshCategories(1), 1000);
         }
       }
     } catch (error) {
       console.error("Failed to fetch categories:", error);
-      
+
       // Retry once on error
       if (retryCount === 0) {
-        console.log("Retrying category fetch after error...");
         setTimeout(() => refreshCategories(1), 2000);
       } else {
         // Try to load from cache as fallback
         const cachedCategories = cache.get(CACHE_KEYS.CATEGORIES);
         if (cachedCategories && Array.isArray(cachedCategories)) {
           setCategories(cachedCategories);
-          console.log("Loaded categories from cache");
         } else {
           setCategories([]);
         }
@@ -227,7 +219,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const clearCategoriesCache = useCallback(() => {
     cache.remove(CACHE_KEYS.CATEGORIES);
     setCategories([]);
-    console.log("Categories cache cleared");
   }, []);
 
   useEffect(() => {
@@ -261,9 +252,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 }
 
 export function useFinance() {
-    const context = useContext(FinanceContext)
-    if (context === undefined) {
-        throw new Error('useFinance must be used within a FinanceProvider')
-    }
-    return context
+  const context = useContext(FinanceContext)
+  if (context === undefined) {
+    throw new Error('useFinance must be used within a FinanceProvider')
+  }
+  return context
 }

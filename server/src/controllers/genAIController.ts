@@ -22,7 +22,7 @@ const analyzeMonthlyTransactions = asyncHandler(async (req, res) => {
                 $lte: new Date(endDate)
             }
         }).populate('categoryId', 'name')
-          .populate('accountId', 'accountName accountType');
+            .populate('accountId', 'accountName accountType');
 
         if (!transactions.length) {
             return res.status(404).json(
@@ -31,7 +31,7 @@ const analyzeMonthlyTransactions = asyncHandler(async (req, res) => {
         }
 
         // Format transactions for AI analysis
-        const formattedTransactions = transactions.map(txn => ({
+        const formattedTransactions = transactions.map((txn: any) => ({
             amount: txn.amount,
             type: txn.transactionType,
             category: txn.categoryId?.name || 'Uncategorized',
@@ -83,7 +83,7 @@ const getSmartSuggestions = asyncHandler(async (req, res) => {
                 $lte: new Date(endDate)
             }
         }).populate('categoryId', 'name')
-          .populate('accountId', 'accountName accountType');
+            .populate('accountId', 'accountName accountType');
 
         if (!transactions.length) {
             return res.status(404).json(
@@ -92,7 +92,7 @@ const getSmartSuggestions = asyncHandler(async (req, res) => {
         }
 
         // Format transactions for AI analysis
-        const formattedTransactions = transactions.map(txn => ({
+        const formattedTransactions = transactions.map((txn: any) => ({
             amount: txn.amount,
             type: txn.transactionType,
             category: txn.categoryId?.name || 'Uncategorized',
@@ -112,9 +112,9 @@ const getSmartSuggestions = asyncHandler(async (req, res) => {
             { role: "user", content: prompt }
         ]);
 
-          // Parse the AI response to extract JSON
-          const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
-          const suggestions = jsonMatch ? JSON.parse(jsonMatch[1]) : aiResponse;
+        // Parse the AI response to extract JSON
+        const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/);
+        const suggestions = jsonMatch ? JSON.parse(jsonMatch[1]) : aiResponse;
         return res.status(200).json(
             new ApiResponse(200, { suggestions: suggestions }, "Smart suggestions generated successfully")
         );
@@ -125,4 +125,4 @@ const getSmartSuggestions = asyncHandler(async (req, res) => {
     }
 });
 
-export { analyzeMonthlyTransactions, getSmartSuggestions }; 
+export { analyzeMonthlyTransactions, getSmartSuggestions };

@@ -33,7 +33,7 @@ Press `F5` and select:
 ```bash
 # Start with Docker
 cd docker
-docker-compose up -d
+docker-compose up -d --build
 
 # View logs
 docker-compose logs -f
