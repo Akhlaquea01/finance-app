@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -26,8 +26,9 @@ const loginSchema = z.object({
     password: z.string().min(4, "Password must be at least 4 characters"),
 })
 
-export default function LoginPage() {
-    const routes = useRouter()
+function LoginForm() {
+    const router = useRouter()
+    const searchParams = useSearchParams()
     const { updateUserData } = useFinance()
     const [isLoading, setIsLoading] = useState(false)
 
@@ -42,17 +43,38 @@ export default function LoginPage() {
 
     const onSubmit = async (data: z.infer<typeof loginSchema>) => {
         try {
-            const res = await loginUser(data)
-            const token = res?.data?.accessToken
-            if (token) {
-              storage.setToken(token);
-              storage.setUser(res.data.user);
-              updateUserData(res.data.user); // Update context immediately
-              routes.push("/dashboard");
-              toast.success("Logged in successfully");
+            setIsLoading(true);
+            const res = await loginUser(data);
+            
+            // Extract tokens from response
+            const accessToken = res?.data?.accessToken;
+            const refreshToken = res?.data?.refreshToken;
+            const user = res?.data?.user;
+            
+            if (accessToken && user) {
+                // Store tokens properly
+                storage.setToken({
+                    accessToken,
+                    refreshToken
+                });
+                storage.setUser(user);
+                updateUserData(user);
+                
+                toast.success("Logged in successfully");
+                
+                // Get callback URL from query params or default to dashboard
+                const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+                
+                // Use window.location for hard navigation to ensure middleware re-runs
+                window.location.href = callbackUrl;
+            } else {
+                toast.error("Invalid response from server");
             }
         } catch (err: any) {
-            toast.error(err?.message || "Some thing went wrong!");
+            console.error("Login error:", err);
+            toast.error(err?.message || "Something went wrong!");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -111,5 +133,21 @@ export default function LoginPage() {
                 </p>
             </div>
         </main>
+    )
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <main className="flex min-h-screen items-center justify-center bg-background p-4 md:p-8">
+                <div className="w-full max-w-[400px] space-y-6 rounded-lg border border-border/50 bg-card p-6 shadow-lg">
+                    <div className="flex flex-col space-y-2 text-center">
+                        <h1 className="text-2xl font-semibold tracking-tight">Loading...</h1>
+                    </div>
+                </div>
+            </main>
+        }>
+            <LoginForm />
+        </Suspense>
     )
 }

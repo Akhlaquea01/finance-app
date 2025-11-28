@@ -14,6 +14,12 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
             );
         }
 
+        if (!process.env.ACCESS_TOKEN_SECRET) {
+            return res.status(500).json(
+                new ApiResponse(500, undefined, "Server configuration error: ACCESS_TOKEN_SECRET is not set", new Error("ACCESS_TOKEN_SECRET is not set"))
+            );
+        }
+
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
         const user = await User.findById(decodedToken?._id).select("-password -refreshToken");

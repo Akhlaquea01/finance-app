@@ -120,15 +120,43 @@ const updateCategory = asyncHandler(async (req, res) => {
 const deleteCategory = asyncHandler(async (req, res) => {
     try {
         const { categoryId } = req.params;
+        const userId = req.user._id;
 
-        // Find and delete the category
-        const deletedCategory = await Category.findByIdAndDelete(categoryId);
+        // Find the category
+        const category = await Category.findById(categoryId);
 
-        if (!deletedCategory) {
+        if (!category) {
             return res.status(400).json(
                 new ApiResponse(400, undefined, "Category not found.", new Error("Category not found."))
             );
         }
+
+        // CRITICAL: Verify category belongs to the user (or is a default category)
+        if (!category.isDefault && category.userId.toString() !== userId.toString()) {
+            return res.status(403).json(
+                new ApiResponse(403, undefined, "Unauthorized: Category does not belong to user", new Error("Unauthorized access"))
+            );
+        }
+
+        // Prevent deletion of default categories
+        if (category.isDefault) {
+            return res.status(400).json(
+                new ApiResponse(400, undefined, "Cannot delete default category", new Error("Default categories cannot be deleted"))
+            );
+        }
+
+        // Check if category is used in any transactions
+        const { Transaction } = await import("../models/bank.model.js");
+        const transactionCount = await Transaction.countDocuments({ categoryId });
+
+        if (transactionCount > 0) {
+            return res.status(400).json(
+                new ApiResponse(400, undefined, `Cannot delete category. It is used in ${transactionCount} transaction(s)`, new Error("Category in use"))
+            );
+        }
+
+        // Delete the category
+        await Category.findByIdAndDelete(categoryId);
 
         return res.status(200).json(new ApiResponse(200, null, "Category deleted successfully"));
     } catch (error) {

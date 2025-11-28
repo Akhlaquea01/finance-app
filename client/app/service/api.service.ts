@@ -144,7 +144,10 @@ class ApiService {
     } else if (filterType === 'monthly') {
       queryParams = `filterType=${filterType}&month=${month}&year=${year}`;
     } else if (filterType === 'daily') {
-      const formattedDate = formatDate(date!.toString());
+      if (!date) {
+        throw new Error('Date is required for daily filter type');
+      }
+      const formattedDate = formatDate(date.toString());
       queryParams = `filterType=${filterType}&date=${formattedDate}`;
     } else {
       queryParams = `filterType=${filterType}`;

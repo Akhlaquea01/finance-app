@@ -8,21 +8,23 @@ import dotenv from 'dotenv';
 dotenv.config();
 const app = express();
 
-if (process.env.TELEGRAM_BOT_ENABLE == 'START') {
+if (process.env.TELEGRAM_BOT_ENABLE === 'START') {
     const token = process.env.YOUR_TELEGRAM_BOT_TOKEN;
 
-    // Create an instance of TelegramChatBot
-    const bot = new TelegramChatBot(token);
+    if (token) {
+        // Create an instance of TelegramChatBot
+        const bot = new TelegramChatBot(token);
 
-    // Start listening for any kind of message
-    bot.handleMessage();
+        // Start listening for any kind of message
+        bot.handleMessage();
 
-    // start listening for command
-    bot.handleSummaryCommand();
+        // start listening for command
+        bot.handleSummaryCommand();
+    }
 }
 
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: process.env.CORS_ORIGIN || '*',
     credentials: true
 }));
 

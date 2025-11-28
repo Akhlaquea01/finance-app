@@ -54,13 +54,19 @@ const updateAccount = asyncHandler(async (req, res) => {
     try {
         const { accountId } = req.params;
         const { accountName, accountType, balance, isDefault, status } = req.body;
+        const userId = req.user._id;
+
+        // CRITICAL: Verify account belongs to the user before updating
+        const account = await Account.findOne({ _id: accountId, userId });
+        if (!account) {
+            return res.status(404).json(
+                new ApiResponse(404, undefined, "Account not found or unauthorized", new Error(`Account not found with accountId:${accountId}`))
+            );
+        }
 
         // Check if the account is being set as default and unset other default accounts for the user
         if (isDefault) {
-            const account = await Account.findById(accountId);
-            if (account) {
-                await Account.updateMany({ userId: account.userId, isDefault: true }, { isDefault: false });
-            }
+            await Account.updateMany({ userId, isDefault: true }, { isDefault: false });
         }
 
         const updatedAccount = await Account.findByIdAndUpdate(
@@ -69,11 +75,6 @@ const updateAccount = asyncHandler(async (req, res) => {
             { new: true }
         );
 
-        if (!updatedAccount) {
-            return res.status(404).json(
-                new ApiResponse(404, undefined, "Account not found", new Error(`Account not found with accountId:${accountId}`))
-            );
-        }
         return res.status(200).json(
             new ApiResponse(200, { account: updatedAccount }, "Account updated successfully")
         );
@@ -153,9 +154,19 @@ const getAccount = asyncHandler(async (req, res) => {
 const _createSingleTransaction = async (txnData, session) => {
     const { userId, accountId, transactionType, amount, categoryId, description, tags, location, sharedWith, date } = txnData;
 
+    // Validate amount
+    if (!amount || amount <= 0) {
+        throw { statusCode: 400, message: "Amount must be greater than zero", error: new Error("Invalid amount") };
+    }
+
     const account = await Account.findById(accountId).session(session);
     if (!account) {
         throw { statusCode: 404, message: "Account not found", error: new Error(`Account not found with accountId:${accountId}`) };
+    }
+
+    // CRITICAL: Verify account belongs to the user
+    if (account.userId.toString() !== userId.toString()) {
+        throw { statusCode: 403, message: "Unauthorized: Account does not belong to user", error: new Error("Unauthorized access") };
     }
 
     if (account.status !== 'active') {
@@ -264,6 +275,7 @@ const updateTransaction = async (req, res) => {
     try {
         const { transactionId } = req.params;
         const { transactionType, amount, categoryId, description, tags, location, sharedWith, date, accountId } = req.body;
+        const userId = req.user._id;
         let oldTransaction;
         let updatedTransaction;
 
@@ -275,6 +287,24 @@ const updateTransaction = async (req, res) => {
             session.endSession();
             return res.status(400).json(
                 new ApiResponse(400, undefined, "Transaction not found", new Error("Transaction with the given ID does not exist"))
+            );
+        }
+
+        // CRITICAL: Verify transaction belongs to the user
+        if (oldTransaction.userId.toString() !== userId.toString()) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json(
+                new ApiResponse(403, undefined, "Unauthorized: Transaction does not belong to user", new Error("Unauthorized access"))
+            );
+        }
+
+        // Validate amount if provided
+        if (amount !== undefined && amount <= 0) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json(
+                new ApiResponse(400, undefined, "Amount must be greater than zero", new Error("Invalid amount"))
             );
         }
 
@@ -326,7 +356,7 @@ const updateTransaction = async (req, res) => {
         }
 
         // Handle new transaction
-        if (accountId) {
+        if (accountId && newAccount) {
             // If account is being changed
             if (newAccount.accountType === "credit_card") {
                 // For credit cards, balance represents used amount (debt)
@@ -451,20 +481,21 @@ const updateTransaction = async (req, res) => {
             );
         }
 
-        // Update the transaction
+        // Update the transaction - use explicit checks instead of OR operator
+        const updateData: any = {};
+        if (transactionType !== undefined) updateData.transactionType = transactionType;
+        if (amount !== undefined) updateData.amount = amount;
+        if (categoryId !== undefined) updateData.categoryId = categoryId;
+        if (description !== undefined) updateData.description = description;
+        if (tags !== undefined) updateData.tags = tags;
+        if (date !== undefined) updateData.date = new Date(date);
+        if (location !== undefined) updateData.location = location;
+        if (sharedWith !== undefined) updateData.sharedWith = sharedWith;
+        if (accountId !== undefined) updateData.accountId = accountId;
+
         updatedTransaction = await Transaction.findByIdAndUpdate(
             transactionId,
-            {
-                transactionType: transactionType || oldTransaction.transactionType,
-                amount: amount || oldTransaction.amount,
-                categoryId: categoryId || oldTransaction.categoryId,
-                description: description || oldTransaction.description,
-                tags: tags || oldTransaction.tags,
-                date: date ? new Date(date) : new Date(oldTransaction.date),
-                location: location || oldTransaction.location,
-                sharedWith: sharedWith || oldTransaction.sharedWith,
-                accountId: accountId || oldTransaction.accountId
-            },
+            updateData,
             { new: true, session }
         );
 
@@ -485,6 +516,7 @@ const updateTransaction = async (req, res) => {
 
 const deleteTransaction = async (req, res) => {
     const { transactionId } = req.params;
+    const userId = req.user._id;
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -499,6 +531,15 @@ const deleteTransaction = async (req, res) => {
             );
         }
 
+        // CRITICAL: Verify transaction belongs to the user
+        if (transaction.userId.toString() !== userId.toString()) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json(
+                new ApiResponse(403, undefined, "Unauthorized: Transaction does not belong to user", new Error("Unauthorized access"))
+            );
+        }
+
         const account = await Account.findById(transaction.accountId).session(session);
 
         if (!account) {
@@ -510,10 +551,24 @@ const deleteTransaction = async (req, res) => {
         }
 
         // Reverse the transaction amount
-        if (transaction.transactionType === 'debit') {
-            account.balance += transaction.amount;
-        } else if (transaction.transactionType === 'credit') {
-            account.balance -= transaction.amount;
+        if (account.accountType === "credit_card") {
+            // For credit cards, balance represents used amount (debt)
+            if (transaction.transactionType === 'debit') {
+                // Reverse debit: decrease debt (decrease balance)
+                account.balance -= transaction.amount;
+            } else if (transaction.transactionType === 'credit') {
+                // Reverse credit: increase debt (increase balance)
+                account.balance += transaction.amount;
+            }
+        } else {
+            // For regular accounts
+            if (transaction.transactionType === 'debit') {
+                // Reverse debit: add back the amount
+                account.balance += transaction.amount;
+            } else if (transaction.transactionType === 'credit') {
+                // Reverse credit: subtract the amount
+                account.balance -= transaction.amount;
+            }
         }
 
         await account.save({ session });
@@ -568,13 +623,27 @@ const getTransactions = async (req, res) => {
         // Filter by min/max amount
         if (minAmount || maxAmount) {
             filter.amount = {};
-            if (minAmount) filter.amount.$gte = parseFloat(minAmount);
-            if (maxAmount) filter.amount.$lte = parseFloat(maxAmount);
+            if (minAmount) {
+                const parsedMin = parseFloat(minAmount);
+                if (!isNaN(parsedMin)) {
+                    filter.amount.$gte = parsedMin;
+                }
+            }
+            if (maxAmount) {
+                const parsedMax = parseFloat(maxAmount);
+                if (!isNaN(parsedMax)) {
+                    filter.amount.$lte = parsedMax;
+                }
+            }
         }
 
         // Filter by tags (check if any tag matches)
         if (tags) {
-            filter.tags = { $in: tags.split(",") }; // Expecting tags as comma-separated values
+            if (typeof tags === 'string') {
+                filter.tags = { $in: tags.split(",") }; // Expecting tags as comma-separated values
+            } else if (Array.isArray(tags)) {
+                filter.tags = { $in: tags };
+            }
         }
 
 
@@ -622,6 +691,9 @@ const getTransactionSummary = async (req, res) => {
         if (month && year) {
             const queryMonth = parseInt(month, 10) - 1;
             const queryYear = parseInt(year, 10);
+            if (isNaN(queryMonth) || isNaN(queryYear)) {
+                return res.status(400).json(new ApiResponse(400, undefined, "Invalid month or year values", new Error("Month and year must be valid numbers")));
+            }
             queryStartDate = new Date(Date.UTC(queryYear, queryMonth, 1));
             queryEndDate = new Date(Date.UTC(queryYear, queryMonth + 1, 0, 23, 59, 59, 999));
         } else if (startDate && endDate) {
@@ -863,7 +935,17 @@ const getIncomeExpenseSummary = async (req, res) => {
                     return res.status(400).json(new ApiResponse(400, null, "Date is required for daily filter"));
                 }
                 // Parse date in DD/MM/YYYY format
-                const [day, parsedMonth, parsedYear] = date.split('/').map(Number);
+                if (typeof date !== 'string' || !date.includes('/')) {
+                    return res.status(400).json(new ApiResponse(400, null, "Invalid date format. Expected DD/MM/YYYY"));
+                }
+                const dateParts = date.split('/');
+                if (dateParts.length !== 3) {
+                    return res.status(400).json(new ApiResponse(400, null, "Invalid date format. Expected DD/MM/YYYY"));
+                }
+                const [day, parsedMonth, parsedYear] = dateParts.map(Number);
+                if (isNaN(day) || isNaN(parsedMonth) || isNaN(parsedYear)) {
+                    return res.status(400).json(new ApiResponse(400, null, "Invalid date values. Day, month, and year must be numbers"));
+                }
                 startDate = new Date(parsedYear, parsedMonth - 1, day);
                 endDate = new Date(parsedYear, parsedMonth - 1, day, 23, 59, 59);
                 break;
@@ -872,20 +954,32 @@ const getIncomeExpenseSummary = async (req, res) => {
                 if (!month || !year) {
                     return res.status(400).json(new ApiResponse(400, null, "Month and year are required for monthly filter"));
                 }
+                const monthlyParsedMonth = Number(month);
+                const monthlyParsedYear = Number(year);
+                if (isNaN(monthlyParsedMonth) || isNaN(monthlyParsedYear)) {
+                    return res.status(400).json(new ApiResponse(400, null, "Invalid month or year values. Month and year must be numbers"));
+                }
+                if (monthlyParsedMonth < 1 || monthlyParsedMonth > 12) {
+                    return res.status(400).json(new ApiResponse(400, null, "Invalid month. Month must be between 1 and 12"));
+                }
                 // For monthly, we need to set the date to the first day of the month at 00:00:00
-                startDate = new Date(Number(year), Number(month) - 1, 1);
+                startDate = new Date(monthlyParsedYear, monthlyParsedMonth - 1, 1);
                 // For the end date, we need to set it to the last day of the month at 23:59:59
-                endDate = new Date(Number(year), Number(month), 0, 23, 59, 59);
+                endDate = new Date(monthlyParsedYear, monthlyParsedMonth, 0, 23, 59, 59);
                 break;
 
             case 'yearly':
                 if (!year) {
                     return res.status(400).json(new ApiResponse(400, null, "Year is required for yearly filter"));
                 }
+                const yearlyParsedYear = Number(year);
+                if (isNaN(yearlyParsedYear)) {
+                    return res.status(400).json(new ApiResponse(400, null, "Invalid year value. Year must be a number"));
+                }
                 // For yearly, we need to set the date to January 1st at 00:00:00
-                startDate = new Date(Number(year), 0, 1);
+                startDate = new Date(yearlyParsedYear, 0, 1);
                 // For the end date, we need to set it to December 31st at 23:59:59
-                endDate = new Date(Number(year), 11, 31, 23, 59, 59);
+                endDate = new Date(yearlyParsedYear, 11, 31, 23, 59, 59);
                 break;
         }
 
@@ -1061,6 +1155,15 @@ const transferMoney = async (req, res) => {
         const { sourceAccountId, destinationAccountId, amount, description, tags, isBillPayment, categoryId, txnDate } = req.body;
         const userId = req.user._id;
 
+        // Validate required fields
+        if (!sourceAccountId || !destinationAccountId) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json(
+                new ApiResponse(400, undefined, "Source and destination accounts are required", new Error("Missing required fields"))
+            );
+        }
+
         // Block negative/zero amounts
         if (!amount || amount <= 0) {
             await session.abortTransaction();
@@ -1165,8 +1268,48 @@ const transferMoney = async (req, res) => {
             );
         }
 
+        // Parse and validate the transaction date
+        let transactionDate = new Date();
+        if (txnDate) {
+            try {
+                // Handle different date formats
+                if (typeof txnDate === 'string') {
+                    // If it's YYYY-MM-DD format, parse it correctly in UTC to match client timezone
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(txnDate)) {
+                        const [year, month, day] = txnDate.split('-').map(Number);
+                        // Use Date.UTC to create date in UTC timezone, matching client's .toISOString()
+                        transactionDate = new Date(Date.UTC(year, month - 1, day));
+                    } else {
+                        transactionDate = new Date(txnDate);
+                    }
+                } else {
+                    transactionDate = new Date(txnDate);
+                }
+                
+                // Validate the date
+                if (isNaN(transactionDate.getTime())) {
+                    await session.abortTransaction();
+                    session.endSession();
+                    return res.status(400).json(
+                        new ApiResponse(400, undefined, "Invalid date format", new Error("Invalid txnDate provided"))
+                    );
+                }
+            } catch (error) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json(
+                    new ApiResponse(400, undefined, "Invalid date format", new Error("Invalid txnDate provided"))
+                );
+            }
+        }
+
         // Create a reference ID to link the two transactions
         const referenceId = new mongoose.Types.ObjectId().toString();
+
+        // Prepare tags based on bill payment status
+        const transactionTags = tags && tags.length > 0 
+            ? tags 
+            : ["transfer", isBillPayment ? "bill-payment" : "internal-transfer"];
 
         // Create debit transaction from source account
         const debitTransaction = new Transaction({
@@ -1175,12 +1318,12 @@ const transferMoney = async (req, res) => {
             transactionType: "debit",
             amount,
             categoryId: transactionCategoryId,
-            description: description || `Transfer to ${destinationAccount.accountName}`,
-            tags: tags || ["transfer", isBillPayment ? "bill-payment" : "internal-transfer"],
+            description: description || `Transfer to ${destinationAccount.accountName}${isBillPayment ? ' (Bill Payment)' : ''}`,
+            tags: transactionTags,
             location: [],
             sharedWith: [],
             referenceId,
-            date: txnDate ? new Date(txnDate) : new Date()
+            date: transactionDate
         });
 
         // Create credit transaction to destination account
@@ -1190,12 +1333,12 @@ const transferMoney = async (req, res) => {
             transactionType: "credit",
             amount,
             categoryId: transactionCategoryId,
-            description: description || `Transfer from ${sourceAccount.accountName}`,
-            tags: tags || ["transfer", isBillPayment ? "bill-payment" : "internal-transfer"],
+            description: description || `Transfer from ${sourceAccount.accountName}${isBillPayment ? ' (Bill Payment)' : ''}`,
+            tags: transactionTags,
             location: [],
             sharedWith: [],
             referenceId,
-            date: txnDate ? new Date(txnDate) : new Date()
+            date: transactionDate
         });
 
         // Update account balances

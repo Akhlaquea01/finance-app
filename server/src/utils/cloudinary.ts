@@ -28,6 +28,9 @@ const uploadOnCloudinary = async (localFilePath, folder = '') => {
 // Function to delete a file from Cloudinary by URL
 const deleteFromCloudinaryByUrl = async (fileUrl, folder:any = '') => {
     try {
+        if (!fileUrl || typeof fileUrl !== 'string') {
+            return false;
+        }
         const publicId = fileUrl.split('/').slice(-1)[0].split('.')[0]; // Extract public ID from URL
         const response = await cloudinary.uploader.destroy(publicId); // Delete the file from Cloudinary
         return response.result === 'ok';

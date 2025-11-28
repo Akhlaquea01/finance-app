@@ -87,22 +87,35 @@ export function AddTransferModal({ open, onClose }: AddTransferModalProps) {
 
   async function onSubmit(values: TransferFormValues) {
     try {
+      // Format date properly - send as YYYY-MM-DD string
+      const formattedDate = values.txnDate instanceof Date 
+        ? values.txnDate.toISOString().split('T')[0]
+        : new Date(values.txnDate).toISOString().split('T')[0];
+
       const payload = {
-        ...values,
-        userId: userData?._id,
-        txnDate: values.txnDate.toISOString(), // Format as ISO string (date only)
-      }
-      await createTransfer(payload)
-      refreshData()
-      form.reset()
-      toast.success("Transfer created successfully")
-      onClose()
+        sourceAccountId: values.sourceAccountId,
+        destinationAccountId: values.destinationAccountId,
+        amount: Number(values.amount),
+        description: values.description,
+        categoryId: values.categoryId,
+        tags: values.tags || [],
+        isBillPayment: values.isBillPayment || false,
+        txnDate: formattedDate, // Send date in YYYY-MM-DD format
+      };
+
+      console.log('Transfer payload:', payload); // Debug log
+      
+      await createTransfer(payload);
+      refreshData();
+      form.reset();
+      toast.success("Transfer created successfully");
+      onClose();
       
       // Dispatch custom event to refresh dashboard
       window.dispatchEvent(new CustomEvent('financeDataUpdated'));
-    } catch (error) {
-      console.error(error)
-      toast.error("Failed to create transfer")
+    } catch (error: any) {
+      console.error('Transfer error:', error);
+      toast.error(error?.message || "Failed to create transfer");
     }
   }
 

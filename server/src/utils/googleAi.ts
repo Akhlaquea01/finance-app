@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API }); // Ensure API key is loaded properly
+const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API || '' }); // Ensure API key is loaded properly
 
 /**
  * Function to get a chat response from Google GenAI

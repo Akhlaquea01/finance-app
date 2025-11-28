@@ -163,13 +163,22 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production'
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000 // 1 day for accessToken
+    };
+
+    const refreshOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+        maxAge: 10 * 24 * 60 * 60 * 1000 // 10 days for refreshToken
     };
 
     return res
         .status(200)
         .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
+        .cookie("refreshToken", refreshToken, refreshOptions)
         .json(
             new ApiResponse(
                 200,
@@ -215,6 +224,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
     try {
+        if (!process.env.REFRESH_TOKEN_SECRET) {
+            return res.status(500).json(
+                new ApiResponse(500, undefined, "Server configuration error: REFRESH_TOKEN_SECRET is not set", new Error("REFRESH_TOKEN_SECRET is not set"))
+            );
+        }
+
         const decodedToken = jwt.verify(
             incomingRefreshToken,
             process.env.REFRESH_TOKEN_SECRET
