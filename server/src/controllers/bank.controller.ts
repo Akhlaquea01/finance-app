@@ -743,8 +743,35 @@ const getTransactionSummary = async (req, res) => {
                         {
                             $group: {
                                 _id: null,
-                                totalIncome: { $sum: { $cond: [{ $eq: ["$transactionType", "credit"] }, "$amount", 0] } },
-                                totalExpense: { $sum: { $cond: [{ $eq: ["$transactionType", "debit"] }, "$amount", 0] } },
+                                totalIncome: { 
+                                    $sum: { 
+                                        $cond: [
+                                            { 
+                                                $and: [
+                                                    { $eq: ["$transactionType", "credit"] }, 
+                                                    { $ne: ["$account.accountType", "credit_card"] },
+                                                    { $not: { $in: ["transfer", { $ifNull: ["$tags", []] }] } }
+                                                ] 
+                                            }, 
+                                            "$amount", 
+                                            0
+                                        ] 
+                                    } 
+                                },
+                                totalExpense: { 
+                                    $sum: { 
+                                        $cond: [
+                                            { 
+                                                $and: [
+                                                    { $eq: ["$transactionType", "debit"] },
+                                                    { $not: { $in: ["transfer", { $ifNull: ["$tags", []] }] } }
+                                                ]
+                                            }, 
+                                            "$amount", 
+                                            0
+                                        ] 
+                                    } 
+                                },
                                 creditCardPayments: { $sum: { $cond: [{ $and: [{ $eq: ["$transactionType", "credit"] }, { $eq: ["$account.accountType", "credit_card"] }] }, "$amount", 0] } },
                                 creditCardExpenses: { $sum: { $cond: [{ $and: [{ $eq: ["$transactionType", "debit"] }, { $eq: ["$account.accountType", "credit_card"] }] }, "$amount", 0] } }
                             }
@@ -755,8 +782,35 @@ const getTransactionSummary = async (req, res) => {
                         {
                             $group: {
                                 _id: null,
-                                prevMonthIncome: { $sum: { $cond: [{ $eq: ["$transactionType", "credit"] }, "$amount", 0] } },
-                                prevMonthExpense: { $sum: { $cond: [{ $eq: ["$transactionType", "debit"] }, "$amount", 0] } },
+                                prevMonthIncome: { 
+                                    $sum: { 
+                                        $cond: [
+                                            { 
+                                                $and: [
+                                                    { $eq: ["$transactionType", "credit"] }, 
+                                                    { $ne: ["$account.accountType", "credit_card"] },
+                                                    { $not: { $in: ["transfer", { $ifNull: ["$tags", []] }] } }
+                                                ] 
+                                            }, 
+                                            "$amount", 
+                                            0
+                                        ] 
+                                    } 
+                                },
+                                prevMonthExpense: { 
+                                    $sum: { 
+                                        $cond: [
+                                            { 
+                                                $and: [
+                                                    { $eq: ["$transactionType", "debit"] },
+                                                    { $not: { $in: ["transfer", { $ifNull: ["$tags", []] }] } }
+                                                ]
+                                            }, 
+                                            "$amount", 
+                                            0
+                                        ] 
+                                    } 
+                                },
                                 prevMonthCreditCardPayments: { $sum: { $cond: [{ $and: [{ $eq: ["$transactionType", "credit"] }, { $eq: ["$account.accountType", "credit_card"] }] }, "$amount", 0] } },
                                 prevMonthCreditCardExpenses: { $sum: { $cond: [{ $and: [{ $eq: ["$transactionType", "debit"] }, { $eq: ["$account.accountType", "credit_card"] }] }, "$amount", 0] } }
                             }
