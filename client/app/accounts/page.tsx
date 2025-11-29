@@ -1,57 +1,36 @@
 'use client'
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import { CreditCard, Edit, Landmark, Plus, Trash, Wallet } from "lucide-react"
+import { CreditCard, Landmark, Plus, Trash, Wallet, LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { deleteAccount, fetchAccountList } from "../service/api.service"
 import { AddAccountDialog } from "@/components/add-account-dialog"
 import { toast } from "sonner"
 import { EditAccountDialog } from "@/components/edit-account-dialog"
+import { NoDataFound } from "@/components/no-data-found"
 
-// Sample data - in a real app, this would come from your database
-const accountsData = [
-  {
-    id: "1",
-    name: "Checking Account",
-    type: "bank",
-    balance: 2500.75,
-    icon: Landmark,
-  },
-  {
-    id: "2",
-    name: "Savings Account",
-    type: "bank",
-    balance: 12500.5,
-    icon: Wallet,
-  },
-  {
-    id: "3",
-    name: "Credit Card",
-    type: "credit",
-    balance: -1250.25,
-    limit: 5000,
-    icon: CreditCard,
-  },
-]
+const iconMap: Record<string, LucideIcon> = {
+  Landmark: Landmark,
+  Wallet: Wallet,
+  CreditCard: CreditCard,
+}
 
 export default function AccountsPage() {
   const [allAccounts, setAllAccounts] = useState<any[]>([])
   const [openAddAccountDialog, setOpenAddAccountDialog] = useState(false)
-  const [editAccount, setEditAccount] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchAccounts = async () => {
     setLoading(true)
     try {
       const res = await fetchAccountList()
-      setAllAccounts(res?.data?.accounts)
+      setAllAccounts(res?.data?.accounts || [])
     } catch (error) {
       console.error('Error fetching accounts:', error)
+      toast.error("Failed to fetch accounts")
     } finally {
       setLoading(false)
     }
@@ -61,128 +40,169 @@ export default function AccountsPage() {
     fetchAccounts()
   }, [])
 
-  const handleEditAccount = (account: any) => {
-    setOpenAddAccountDialog(true)
-    setEditAccount(account)
-  }
-
-  const handleDeleteAccount = async (id: any) => {
+  const handleDeleteAccount = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this account?")) {
+      return
+    }
     try {
-      const res = await deleteAccount(id)
+      await deleteAccount(id)
       toast.success("Account deleted successfully")
-      fetchAccounts() // Auto-refresh after deletion
+      fetchAccounts()
     } catch (error) {
       console.error('Error deleting account:', error)
       toast.error("Failed to delete account")
     }
   }
 
+  const totalAssets = allAccounts.reduce((sum, account) => {
+    if (!account) return sum
+    return account.accountType !== "credit_card"
+      ? sum + (account.balance || 0)
+      : sum - (account.balance || 0)
+  }, 0)
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+    }).format(amount)
+  }
+
   return (
-    <div className="flex flex-col">
-      <div className="flex-1 space-y-4 p-2 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Accounts</h2>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" className="cursor-pointer" onClick={() => setOpenAddAccountDialog(true)} >
-              <Plus />Add Account</Button>
-          </div>
+    <div className="space-y-6 sm:mt-4 md:mt-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-semibold">Accounts</h2>
+          <p className="text-sm text-muted-foreground">Manage your financial accounts</p>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>Financial Accounts</CardTitle>
-            <CardDescription>Manage your bank accounts, credit cards, and other financial accounts.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex space-x-4">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-20" />
-                  </div>
-                  <Skeleton className="h-4 w-16" />
-                </div>
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex justify-between items-center py-4 border-b">
-                    <Skeleton className="h-5 w-40" />
-                    <Skeleton className="h-5 w-24" />
-                    <Skeleton className="h-5 w-28" />
-                    <div className="w-40">
-                      <Skeleton className="h-4 w-full mb-1" />
-                      <Skeleton className="h-2 w-full" />
-                    </div>
-                    <div className="flex space-x-2">
-                      <Skeleton className="h-8 w-8 rounded-md" />
-                      <Skeleton className="h-8 w-8 rounded-md" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Balance</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allAccounts?.map((account) => (
-                    <TableRow key={account._id}>
-                      <TableCell>
-                        {/* <account.icon className="h-5 w-5 text-muted-foreground" /> */}
-                        {account.accountName}
-                      </TableCell>
-                      <TableCell className="font-medium">{account.accountType}</TableCell>
-                      <TableCell className={account.balance < 0 ? "text-red-500" : ""}>
-                        {account.currency}{account.balance.toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        {account.accountType === "credit" && account.limit ? (
-                          <div className="w-40 space-y-1">
-                            <div className="flex text-xs justify-between">
-                              <span>Credit Used</span>
-                              <span>{Math.round((Math.abs(account.balance) / account.limit) * 100)}%</span>
-                            </div>
-                            <Progress value={(Math.abs(account.balance) / account.limit) * 100} className="h-2" />
-                          </div>
-                        ) : (
-                          <span className="text-green-500">Active</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <EditAccountDialog
-                            account={account}
-                            onSuccess={fetchAccounts}
-                          />
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteAccount(account._id)}>
-                            <Trash className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+        <Button onClick={() => setOpenAddAccountDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Account
+        </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Financial Accounts</CardTitle>
+          <CardDescription>View and manage your bank accounts, credit cards, and other financial accounts.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex flex-col space-y-2">
+                  <div className="flex items-center">
+                    <Skeleton className="h-5 w-5 mr-2 rounded-full" />
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-5 w-20 ml-auto" />
+                    <Skeleton className="h-8 w-8 ml-2 rounded-full" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-28" />
+                    </div>
+                    <Skeleton className="h-2 w-full" />
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center border-t pt-4 mt-2">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-5 w-28 ml-auto" />
+              </div>
+            </div>
+          ) : allAccounts.length === 0 ? (
+            <NoDataFound
+              title="No Accounts found"
+              description="You haven't added any accounts yet. Click the button above to add your first account."
+              addButtonText="Add Account"
+              onAddClick={() => setOpenAddAccountDialog(true)}
+            />
+          ) : (
+            <div className="space-y-4">
+              {allAccounts.map((account) => {
+                if (!account) return null
+
+                const Icon = iconMap[account.iconName] || Wallet
+                const balance = account.balance || 0
+                const limit = account.limit || 0
+
+                return (
+                  <div key={account._id} className="flex flex-col space-y-2 pb-4 border-b last:border-b-0 last:pb-0">
+                    <div className="flex items-center">
+                      <Icon className="mr-2 h-5 w-5 text-muted-foreground" />
+                      <span className="font-medium flex-1">{account.accountName}</span>
+                      <span
+                        className={`font-medium ${
+                          balance < 0 ? "text-red-500" : ""
+                        }`}
+                      >
+                        {account.currency || '₹'}
+                        {Math.abs(balance).toFixed(2)}
+                      </span>
+                      <div className="ml-2 flex items-center gap-1">
+                        <EditAccountDialog
+                          account={account}
+                          onSuccess={fetchAccounts}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDeleteAccount(account._id)}
+                        >
+                          <Trash className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {account.accountType === "credit_card" && limit > 0 && (
+                      <div className="space-y-1 ml-7">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Credit Used</span>
+                          <span className="text-muted-foreground">
+                            {account.currency || '₹'}
+                            {Math.abs(balance).toFixed(2)} / {formatCurrency(limit)}
+                          </span>
+                        </div>
+                        <Progress
+                          value={(Math.abs(balance) / limit) * 100}
+                          className="h-2"
+                          indicatorClassName={
+                            Math.abs(balance) / limit > 0.8
+                              ? "bg-red-500"
+                              : "bg-cyan-500"
+                          }
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              <div className="flex items-center border-t pt-4 mt-4">
+                <span className="font-medium">Total Assets</span>
+                <span className={`ml-auto font-bold ${
+                  totalAssets >= 0 ? "text-emerald-500" : "text-red-500"
+                }`}>
+                  {formatCurrency(totalAssets)}
+                </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {openAddAccountDialog && (
         <AddAccountDialog
           open={openAddAccountDialog}
           onClose={() => setOpenAddAccountDialog(false)}
           editAccount={null}
           onSuccess={() => {
-            setOpenAddAccountDialog(false);
-            fetchAccounts(); // Auto-refresh after adding account
+            setOpenAddAccountDialog(false)
+            fetchAccounts()
           }}
         />
       )}

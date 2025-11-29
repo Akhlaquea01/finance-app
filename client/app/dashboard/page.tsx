@@ -1,9 +1,7 @@
 "use client"
 
-import { Suspense, useEffect, useMemo, useState, useCallback } from "react"
-import Link from "next/link"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import {
-  ArrowRight,
   CreditCard,
   IndianRupee,
   PiggyBank,
@@ -16,14 +14,11 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AccountSummary } from "@/components/account-summary";
-import { RecentTransactions } from "@/components/recent-transactions";
 import { TransactionSummary } from "@/components/transaction-summary";
 import { useFinance } from "@/app/context/finance-context";
 import AISuggestionsCard from "@/components/ui/AISuggestionsCard";
@@ -31,7 +26,6 @@ import AISuggestionsCard from "@/components/ui/AISuggestionsCard";
 export default function DashboardPage() {
   const {
     summary,
-    accounts,
     transactions,
     loading,
     error,
@@ -45,10 +39,6 @@ export default function DashboardPage() {
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  // Memoize expensive calculations
-  const transactionCount = useMemo(() => transactions?.length || 0, [transactions]);
-  const hasAccounts = useMemo(() => accounts?.length > 0, [accounts]);
-  const hasTransactions = useMemo(() => transactions?.length > 0, [transactions]);
 
   // Force refresh when refreshKey changes
   useEffect(() => {
@@ -116,19 +106,16 @@ export default function DashboardPage() {
             Refresh
           </Button>
         </div>
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs defaultValue="dashboard" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="overview" className="text-sm sm:text-base">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="summary" className="text-sm sm:text-base">
-              Summary
+            <TabsTrigger value="dashboard" className="text-sm sm:text-base">
+              Dashboard
             </TabsTrigger>
             <TabsTrigger value="analytics" className="text-sm sm:text-base">
               Analytics
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent value="dashboard" className="space-y-4">
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -195,66 +182,15 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </div>
-            <Card className="col-span-12">
-              <CardHeader>
-                <CardTitle>Recent Transactions</CardTitle>
-                <CardDescription>
-                  You made {transactionCount} transactions this month.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Suspense fallback={<Skeleton className="h-[350px] w-full" />}>
-                  <RecentTransactions
-                    transactions={transactions || []}
-                    loading={loading}
-                  />
-                </Suspense>
-              </CardContent>
-              {hasTransactions && (
-                <CardFooter>
-                  <Button asChild variant="outline" className="w-full">
-                    <Link href="/transactions">
-                      View All Transactions
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </CardFooter>
-              )}
-            </Card>
-          </TabsContent>
-          <TabsContent value="summary" className="space-y-4">
-            <TransactionSummary />
+            <TransactionSummary 
+              transactions={transactions || []}
+              transactionLoading={loading}
+            />
           </TabsContent>
           <TabsContent value="analytics" className="space-y-4">
             <AISuggestionsCard />
           </TabsContent>
         </Tabs>
-        <div className="grid gap-4">
-          <Card className="col-span-12">
-            <CardHeader>
-              <CardTitle>Accounts</CardTitle>
-              <CardDescription>Manage your financial accounts.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
-                <AccountSummary
-                  allAccounts={accounts || []}
-                  loading={loading}
-                />
-              </Suspense>
-            </CardContent>
-            {hasAccounts && (
-              <CardFooter>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href="/accounts">
-                    Manage Accounts
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardFooter>
-            )}
-          </Card>
-        </div>
       </div>
     </div>
   );

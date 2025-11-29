@@ -115,8 +115,12 @@ class ApiService {
     return await axios.delete(API_ENDPOINTS.ACCOUNTS.DELETE(id));
   }
 
-  async getAccountSummary() {
-    return await axios.get(API_ENDPOINTS.ACCOUNTS.SUMMARY);
+  async getAccountSummary(month?: number, year?: number) {
+    let queryParams = '';
+    if (month && year) {
+      queryParams = `?month=${month}&year=${year}`;
+    }
+    return await axios.get(`${API_ENDPOINTS.ACCOUNTS.SUMMARY}${queryParams}`);
   }
 
   // Transaction Methods

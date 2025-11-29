@@ -6,8 +6,8 @@ import { useTheme } from "next-themes"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowUp, ArrowDown } from "lucide-react"
-import { format, startOfMonth } from "date-fns"
+import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from "lucide-react"
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, isAfter, startOfDay } from "date-fns"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 import { fetchAllTransaction } from "../service/api.service"
@@ -18,6 +18,11 @@ interface Transaction {
     category: {
         name: string
         icon: string
+    }
+    account?: {
+        _id: string
+        accountName: string
+        accountType?: string
     }
     amount: number
     type: "credit" | "debit"
@@ -79,6 +84,36 @@ export default function TransactionsPage() {
         }).format(amount);
     }
 
+    const handlePreviousMonth = () => {
+        const newStartDate = startOfMonth(subMonths(startDate, 1))
+        const newEndDate = endOfMonth(newStartDate)
+        // Don't allow going beyond current month
+        const today = startOfDay(new Date())
+        if (isAfter(newStartDate, today)) return
+        
+        setStartDate(newStartDate)
+        setEndDate(newEndDate > today ? today : newEndDate)
+    }
+
+    const handleNextMonth = () => {
+        const newStartDate = startOfMonth(addMonths(startDate, 1))
+        const newEndDate = endOfMonth(newStartDate)
+        const today = startOfDay(new Date())
+        
+        // Don't allow going to future months
+        if (isAfter(newStartDate, today)) return
+        
+        setStartDate(newStartDate)
+        setEndDate(newEndDate > today ? today : newEndDate)
+    }
+
+    // Check if next month button should be disabled
+    const isNextMonthDisabled = () => {
+        const nextMonthStart = startOfMonth(addMonths(startDate, 1))
+        const today = startOfDay(new Date())
+        return isAfter(nextMonthStart, today)
+    }
+
     return (
         <div className="space-y-6 sm:mt-4 md:mt-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -99,27 +134,44 @@ export default function TransactionsPage() {
                             <TabsTrigger value="debit" className="flex-1">Debit</TabsTrigger>
                         </TabsList>
                     </Tabs>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <DatePicker
-                            selected={startDate}
-                            onChange={(date: Date | null) => date && setStartDate(date)}
-                            selectsStart
-                            startDate={startDate}
-                            endDate={endDate}
-                            maxDate={endDate}
-                            className="w-full sm:w-[150px] p-2 rounded-md border border-input bg-background text-sm"
-                            dateFormat="MMM dd, yyyy"
-                        />
-                        <DatePicker
-                            selected={endDate}
-                            onChange={(date: Date | null) => date && setEndDate(date)}
-                            selectsEnd
-                            startDate={startDate}
-                            endDate={endDate}
-                            minDate={startDate}
-                            className="w-full sm:w-[150px] p-2 rounded-md border border-input bg-background text-sm"
-                            dateFormat="MMM dd, yyyy"
-                        />
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <button
+                            onClick={handlePreviousMonth}
+                            className="p-2 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Previous month"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <DatePicker
+                                selected={startDate}
+                                onChange={(date: Date | null) => date && setStartDate(date)}
+                                selectsStart
+                                startDate={startDate}
+                                endDate={endDate}
+                                maxDate={endDate}
+                                className="w-full sm:w-[150px] p-2 rounded-md border border-input bg-background text-sm"
+                                dateFormat="MMM dd, yyyy"
+                            />
+                            <DatePicker
+                                selected={endDate}
+                                onChange={(date: Date | null) => date && setEndDate(date)}
+                                selectsEnd
+                                startDate={startDate}
+                                endDate={endDate}
+                                minDate={startDate}
+                                className="w-full sm:w-[150px] p-2 rounded-md border border-input bg-background text-sm"
+                                dateFormat="MMM dd, yyyy"
+                            />
+                        </div>
+                        <button
+                            onClick={handleNextMonth}
+                            disabled={isNextMonthDisabled()}
+                            className="p-2 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label="Next month"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
                     </div>
                 </div>
             </div>
@@ -149,6 +201,11 @@ export default function TransactionsPage() {
                                     <p className="text-xs text-muted-foreground">
                                         {format(new Date(transaction.date), 'MMM dd, yyyy')}
                                     </p>
+                                    {transaction.account && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {transaction.account.accountName}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </CardContent>
@@ -171,7 +228,8 @@ export default function TransactionsPage() {
                                     </div>
                                     <div className="text-right">
                                         <Skeleton className="h-4 w-20 mb-2 ml-auto" />
-                                        <Skeleton className="h-3 w-16 ml-auto" />
+                                        <Skeleton className="h-3 w-16 mb-1 ml-auto" />
+                                        <Skeleton className="h-3 w-20 ml-auto" />
                                     </div>
                                 </div>
                             </CardContent>

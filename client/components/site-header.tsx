@@ -8,6 +8,7 @@ import {
   PiggyBank,
   TagsIcon,
   XIcon,
+  Landmark,
 } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -143,6 +144,37 @@ export function SiteHeader({ className }: SiteHeaderProps) {
                   </span>
                 </Link>
 
+                <Link
+                  href="/accounts"
+                  className={cn(
+                    "transition-colors hover:text-foreground/80",
+                    pathname === "/accounts"
+                      ? "text-foreground"
+                      : "text-foreground/60"
+                  )}
+                >
+                  <span className="flex items-center gap-1">
+                    <div
+                      className={cn(
+                        "flex items-center justify-center bg-transparent p-1 sm:p-1 rounded-full border",
+                        pathname === "/accounts"
+                          ? "border-foreground"
+                          : "border-gray-300 dark:border-gray-700"
+                      )}
+                    >
+                      <Landmark
+                        className={cn(
+                          "h-3 w-3 sm:h-5 sm:w-5",
+                          pathname === "/accounts"
+                            ? "text-foreground"
+                            : "text-gray-800 dark:text-gray-100"
+                        )}
+                      />
+                    </div>
+                    Accounts
+                  </span>
+                </Link>
+
               </nav>
             </>
           )}
@@ -194,6 +226,19 @@ export function SiteHeader({ className }: SiteHeaderProps) {
             >
               <TagsIcon className="h-5 w-5" />
               Categories
+            </Link>
+            <Link
+              href="/accounts"
+              className={cn(
+                "flex items-center gap-2 py-2 px-3 rounded-md transition-colors hover:bg-muted",
+                pathname === "/accounts"
+                  ? "bg-muted text-foreground"
+                  : "text-foreground/70"
+              )}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <Landmark className="h-5 w-5" />
+              Accounts
             </Link>
           </nav>
         </div>

@@ -116,7 +116,7 @@ type SectionProps = {
 const Section: React.FC<SectionProps> = ({ title, items }) => {
     return (
         <div className="mb-4">
-            <h3 className="text-base font-semibold text-gray-100 mb-2">{title}</h3>
+            <h3 className="text-base font-semibold text-foreground mb-2">{title}</h3>
             <ul className="list-disc list-inside text-muted-foreground space-y-1 text-sm">
                 {items.map((item, index) => (
                     <li key={index}>{item}</li>
