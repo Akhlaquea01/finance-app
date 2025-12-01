@@ -764,6 +764,7 @@ const getTransactionSummary = async (req, res) => {
                                             { 
                                                 $and: [
                                                     { $eq: ["$transactionType", "debit"] },
+                                                    { $ne: ["$account.accountType", "credit_card"] },
                                                     { $not: { $in: ["transfer", { $ifNull: ["$tags", []] }] } }
                                                 ]
                                             }, 
@@ -803,6 +804,7 @@ const getTransactionSummary = async (req, res) => {
                                             { 
                                                 $and: [
                                                     { $eq: ["$transactionType", "debit"] },
+                                                    { $ne: ["$account.accountType", "credit_card"] },
                                                     { $not: { $in: ["transfer", { $ifNull: ["$tags", []] }] } }
                                                 ]
                                             }, 
@@ -817,14 +819,28 @@ const getTransactionSummary = async (req, res) => {
                         }
                     ],
                     categoryWiseExpense: [
-                        { $match: { date: { $gte: queryStartDate, $lte: queryEndDate }, transactionType: "debit" } },
+                        { 
+                            $match: { 
+                                date: { $gte: queryStartDate, $lte: queryEndDate }, 
+                                transactionType: "debit",
+                                tags: { $nin: ["transfer"] }
+                            } 
+                        },
                         { $group: { _id: "$category.name", amount: { $sum: "$amount" } } },
-                        { $project: { _id: 0, category: { $ifNull: ["$_id", "Unknown"] }, amount: 1 } }
+                        { $project: { _id: 0, category: { $ifNull: ["$_id", "Unknown"] }, amount: 1 } },
+                        { $sort: { amount: -1 } }
                     ],
                     categoryWiseIncome: [
-                        { $match: { date: { $gte: queryStartDate, $lte: queryEndDate }, transactionType: "credit" } },
+                        { 
+                            $match: { 
+                                date: { $gte: queryStartDate, $lte: queryEndDate }, 
+                                transactionType: "credit",
+                                tags: { $nin: ["transfer"] }
+                            } 
+                        },
                         { $group: { _id: "$category.name", amount: { $sum: "$amount" } } },
-                        { $project: { _id: 0, category: { $ifNull: ["$_id", "Unknown"] }, amount: 1 } }
+                        { $project: { _id: 0, category: { $ifNull: ["$_id", "Unknown"] }, amount: 1 } },
+                        { $sort: { amount: -1 } }
                     ]
                 }
             }
@@ -833,18 +849,29 @@ const getTransactionSummary = async (req, res) => {
         const currentSummary = aggregationResult[0].currentPeriod[0] || {};
         const prevSummary = aggregationResult[0].previousPeriod[0] || {};
 
+        // Calculate total expenses including credit card expenses
+        const currentTotalIncome = currentSummary.totalIncome || 0;
+        const currentBankExpense = currentSummary.totalExpense || 0;
+        const currentCCExpense = currentSummary.creditCardExpenses || 0;
+        const currentTotalExpense = currentBankExpense + currentCCExpense;
+        
+        const prevTotalIncome = prevSummary.prevMonthIncome || 0;
+        const prevBankExpense = prevSummary.prevMonthExpense || 0;
+        const prevCCExpense = prevSummary.prevMonthCreditCardExpenses || 0;
+        const prevTotalExpense = prevBankExpense + prevCCExpense;
+
         const response = {
             month: queryStartDate.getUTCMonth() + 1,
             year: queryStartDate.getUTCFullYear(),
             startDate: queryStartDate.toISOString(),
             endDate: queryEndDate.toISOString(),
-            totalIncome: currentSummary.totalIncome || 0,
-            totalExpense: currentSummary.totalExpense || 0,
-            netAmount: (currentSummary.totalIncome || 0) - (currentSummary.totalExpense || 0),
-            lastMonthSavings: (prevSummary.prevMonthIncome || 0) - (prevSummary.prevMonthExpense || 0),
-            creditCardExpenses: currentSummary.creditCardExpenses || 0,
+            totalIncome: currentTotalIncome,
+            totalExpense: currentTotalExpense,
+            netAmount: currentTotalIncome - currentTotalExpense,
+            lastMonthSavings: prevTotalIncome - prevTotalExpense,
+            creditCardExpenses: currentCCExpense,
             creditCardPayments: currentSummary.creditCardPayments || 0,
-            prevMonthCreditCardExpenses: prevSummary.prevMonthCreditCardExpenses || 0,
+            prevMonthCreditCardExpenses: prevCCExpense,
             prevMonthCreditCardPayments: prevSummary.prevMonthCreditCardPayments || 0,
             categoryWiseExpense: aggregationResult[0].categoryWiseExpense,
             categoryWiseIncome: aggregationResult[0].categoryWiseIncome

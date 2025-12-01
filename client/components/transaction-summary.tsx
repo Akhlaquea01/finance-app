@@ -169,14 +169,28 @@ export function TransactionSummary({ transactions = [], transactionLoading = fal
 
     // Month-over-month changes
     const savingsChange = summaryData.netAmount - summaryData.lastMonthSavings
-    const savingsChangePercent = summaryData.lastMonthSavings !== 0
-      ? ((savingsChange / Math.abs(summaryData.lastMonthSavings)) * 100)
-      : 0
+    
+    // Calculate percentage change more intuitively
+    let savingsChangePercent = 0
+    if (summaryData.lastMonthSavings !== 0) {
+      // When going from negative to positive or vice versa, cap the percentage at 100%
+      if ((summaryData.lastMonthSavings < 0 && summaryData.netAmount > 0) || 
+          (summaryData.lastMonthSavings > 0 && summaryData.netAmount < 0)) {
+        savingsChangePercent = savingsChange > 0 ? 100 : -100
+      } else {
+        savingsChangePercent = (savingsChange / Math.abs(summaryData.lastMonthSavings)) * 100
+        // Cap extreme percentages
+        savingsChangePercent = Math.max(-999, Math.min(999, savingsChangePercent))
+      }
+    } else if (savingsChange !== 0) {
+      // If last month was 0, show 100% increase/decrease
+      savingsChangePercent = savingsChange > 0 ? 100 : -100
+    }
 
     const ccExpenseChange = summaryData.creditCardExpenses - summaryData.prevMonthCreditCardExpenses
     const ccExpenseChangePercent = summaryData.prevMonthCreditCardExpenses !== 0
-      ? ((ccExpenseChange / summaryData.prevMonthCreditCardExpenses) * 100)
-      : 0
+      ? Math.max(-999, Math.min(999, (ccExpenseChange / summaryData.prevMonthCreditCardExpenses) * 100))
+      : (ccExpenseChange !== 0 ? (ccExpenseChange > 0 ? 100 : -100) : 0)
 
     const ccOutstanding = summaryData.creditCardExpenses - summaryData.creditCardPayments
     const prevCcOutstanding = summaryData.prevMonthCreditCardExpenses - summaryData.prevMonthCreditCardPayments
