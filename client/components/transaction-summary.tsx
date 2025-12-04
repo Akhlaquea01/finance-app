@@ -69,13 +69,9 @@ export function TransactionSummary({ transactions = [], transactionLoading = fal
         setLoading(true)
         setError(null)
         const response = await fetchAccountStatsSummary(currentMonth, currentYear)
-        console.log('Full API Response:', response)
-        console.log('Response data:', response.data)
-        console.log('Response data.data:', response.data?.data)
         
         // Handle the response structure - data might be nested
         const summaryData = response.data?.data || response.data
-        console.log('Final summary data:', summaryData)
         setSummaryData(summaryData)
       } catch (err) {
         console.error('Failed to fetch transaction summary:', err)
