@@ -58,14 +58,6 @@ Deploy to Render using Docker:
 - `/*` → Frontend (Next.js on port 3000)
 - Nginx on Render's assigned PORT
 
-#### Option 2: Docker (Any Server)
-Deploy anywhere using Docker:
-```bash
-# Create .env.production with your MongoDB URL and secrets
-docker-compose -f docker-compose.prod.yml --env-file .env.production up -d --build
-```
-
-**Access**: `http://your-server-ip` (port 80) or configure custom port in `docker-compose.prod.yml`
 
 ## Environment Variables
 

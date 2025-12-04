@@ -17,12 +17,7 @@
     "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
     "start:server": "cd server && npm start",
     "start:client": "cd client && npm start",
-    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
-    "docker:up": "docker-compose -f docker-compose.test.yml --env-file .env up -d --build",
-    "docker:down": "docker-compose -f docker-compose.test.yml down",
-    "docker:logs": "docker-compose -f docker-compose.test.yml logs -f",
-    "docker:restart": "docker-compose -f docker-compose.test.yml restart",
-    "docker:ps": "docker-compose -f docker-compose.test.yml ps"
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install"
   },
   "keywords": [
     "finance",
