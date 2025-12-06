@@ -71,7 +71,6 @@ export const AccountSummary = memo(function AccountSummary({
       </div>
     );
   }
-  console.log(allAccounts, "allAccounts");
 
   return (
     <div className="space-y-4">

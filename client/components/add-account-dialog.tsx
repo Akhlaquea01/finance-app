@@ -83,7 +83,6 @@ export function AddAccountDialog({ open, onClose, editAccount, onSuccess }: { op
     })
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        // TODO: Implement account creation
         const payload = {
             accountType: values.accountType,
             balance: values.balance,

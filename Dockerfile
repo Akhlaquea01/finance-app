@@ -43,7 +43,7 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache nginx supervisor gettext psmisc
+RUN apk add --no-cache nginx supervisor gettext psmisc netcat-openbsd
 
 # Copy server files
 WORKDIR /app/server
@@ -93,6 +93,48 @@ RUN echo '#!/bin/sh' > /app/start-frontend.sh && \
     echo 'export PORT=3000' >> /app/start-frontend.sh && \
     echo 'exec npm start' >> /app/start-frontend.sh && \
     chmod +x /app/start-frontend.sh
+
+# Create health check wait script
+RUN echo '#!/bin/sh' > /app/wait-for-services.sh && \
+    echo 'set -e' >> /app/wait-for-services.sh && \
+    echo 'echo "Waiting for services to be ready..."' >> /app/wait-for-services.sh && \
+    echo 'MAX_WAIT=180' >> /app/wait-for-services.sh && \
+    echo 'WAIT_COUNT=0' >> /app/wait-for-services.sh && \
+    echo '# Wait for backend' >> /app/wait-for-services.sh && \
+    echo 'echo "Checking backend on port 8080..."' >> /app/wait-for-services.sh && \
+    echo 'while [ $WAIT_COUNT -lt $MAX_WAIT ]; do' >> /app/wait-for-services.sh && \
+    echo '  if nc -z 127.0.0.1 8080 2>/dev/null; then' >> /app/wait-for-services.sh && \
+    echo '    echo "✓ Backend is ready on port 8080"' >> /app/wait-for-services.sh && \
+    echo '    break' >> /app/wait-for-services.sh && \
+    echo '  fi' >> /app/wait-for-services.sh && \
+    echo '  sleep 2' >> /app/wait-for-services.sh && \
+    echo '  WAIT_COUNT=$((WAIT_COUNT + 2))' >> /app/wait-for-services.sh && \
+    echo '  if [ $((WAIT_COUNT % 10)) -eq 0 ]; then' >> /app/wait-for-services.sh && \
+    echo '    echo "Still waiting for backend... ($WAIT_COUNT/$MAX_WAIT seconds)"' >> /app/wait-for-services.sh && \
+    echo '  fi' >> /app/wait-for-services.sh && \
+    echo 'done' >> /app/wait-for-services.sh && \
+    echo 'if [ $WAIT_COUNT -ge $MAX_WAIT ]; then' >> /app/wait-for-services.sh && \
+    echo '  echo "⚠ Warning: Backend did not become ready in time"' >> /app/wait-for-services.sh && \
+    echo 'fi' >> /app/wait-for-services.sh && \
+    echo '# Wait for frontend' >> /app/wait-for-services.sh && \
+    echo 'WAIT_COUNT=0' >> /app/wait-for-services.sh && \
+    echo 'echo "Checking frontend on port 3000..."' >> /app/wait-for-services.sh && \
+    echo 'while [ $WAIT_COUNT -lt $MAX_WAIT ]; do' >> /app/wait-for-services.sh && \
+    echo '  if nc -z 127.0.0.1 3000 2>/dev/null; then' >> /app/wait-for-services.sh && \
+    echo '    echo "✓ Frontend is ready on port 3000"' >> /app/wait-for-services.sh && \
+    echo '    break' >> /app/wait-for-services.sh && \
+    echo '  fi' >> /app/wait-for-services.sh && \
+    echo '  sleep 2' >> /app/wait-for-services.sh && \
+    echo '  WAIT_COUNT=$((WAIT_COUNT + 2))' >> /app/wait-for-services.sh && \
+    echo '  if [ $((WAIT_COUNT % 10)) -eq 0 ]; then' >> /app/wait-for-services.sh && \
+    echo '    echo "Still waiting for frontend... ($WAIT_COUNT/$MAX_WAIT seconds)"' >> /app/wait-for-services.sh && \
+    echo '  fi' >> /app/wait-for-services.sh && \
+    echo 'done' >> /app/wait-for-services.sh && \
+    echo 'if [ $WAIT_COUNT -ge $MAX_WAIT ]; then' >> /app/wait-for-services.sh && \
+    echo '  echo "⚠ Warning: Frontend did not become ready in time"' >> /app/wait-for-services.sh && \
+    echo 'fi' >> /app/wait-for-services.sh && \
+    echo 'echo "✓ All services are ready - starting nginx"' >> /app/wait-for-services.sh && \
+    chmod +x /app/wait-for-services.sh
 
 # Create main startup script
 RUN echo '#!/bin/sh' > /app/start.sh && \

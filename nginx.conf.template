@@ -26,11 +26,13 @@ http {
     keepalive_timeout 65;
 
     upstream backend {
-        server 127.0.0.1:8080;
+        server 127.0.0.1:8080 max_fails=3 fail_timeout=30s;
+        keepalive 32;
     }
 
     upstream frontend {
-        server 127.0.0.1:3000;
+        server 127.0.0.1:3000 max_fails=3 fail_timeout=30s;
+        keepalive 32;
     }
 
     server {
@@ -48,6 +50,14 @@ http {
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
+            
+            # Timeouts and retries
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+            proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
+            proxy_next_upstream_tries 3;
+            proxy_next_upstream_timeout 10s;
         }
 
         # WebSocket support
@@ -73,6 +83,14 @@ http {
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
+            
+            # Timeouts and retries
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+            proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
+            proxy_next_upstream_tries 3;
+            proxy_next_upstream_timeout 10s;
         }
     }
 }

@@ -1,6 +1,7 @@
 import { axios } from "./axios";
 import dayjs from 'dayjs';
 import { cache } from "@/app/lib/cache";
+import { sessionCache } from "@/app/lib/session-cache";
 
 // API Endpoints Configuration
 const API_ENDPOINTS = {
@@ -184,7 +185,24 @@ class ApiService {
 
   // AI Methods
   async getAiSuggestions(payload: { startDate: string; endDate: string }) {
-    return await axios.post(API_ENDPOINTS.AI.SUGGESTIONS, payload);
+    // Check session cache first to avoid expensive AI calls
+    const cacheKey = `ai_suggestions_${payload.startDate}_${payload.endDate}`;
+    const cachedData = sessionCache.get(cacheKey);
+    
+    if (cachedData) {
+      // Return cached data in the same format as API response
+      return { data: cachedData };
+    }
+    
+    // If not cached, make API call
+    const response = await axios.post(API_ENDPOINTS.AI.SUGGESTIONS, payload);
+    
+    // Cache the response for 30 minutes (AI calls are expensive)
+    if (response?.data) {
+      sessionCache.set(cacheKey, response.data, 30 * 60 * 1000); // 30 minutes
+    }
+    
+    return response;
   }
 
 }

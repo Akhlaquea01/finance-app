@@ -93,10 +93,7 @@ export function AddTransactionModal({
   useEffect(() => {
     if (open) {
       if (!categories || categories.length === 0) {
-        console.log("Modal opened, refreshing categories...");
         refreshCategories();
-      } else {
-        console.log("Categories already loaded:", categories.length);
       }
     }
   }, [open, categories, refreshCategories]);
@@ -117,8 +114,9 @@ export function AddTransactionModal({
       
       // Dispatch custom event to refresh dashboard
       window.dispatchEvent(new CustomEvent('financeDataUpdated'));
-    } catch (error) {
-      console.log(error, "error");
+    } catch (error: any) {
+      console.error("Error creating transaction:", error);
+      toast.error(error?.response?.data?.message || "Failed to create transaction");
     }
   }
 
@@ -126,13 +124,6 @@ export function AddTransactionModal({
   const filteredCategories = categories?.filter(
     (category) => category.transactionType === transactionType
   );
-
-  // Debug logging
-  console.log("Categories:", categories);
-  console.log("Transaction Type:", transactionType);
-  console.log("Filtered Categories:", filteredCategories);
-  console.log("Categories length:", categories?.length);
-  console.log("Loading state:", loading);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useInView } from "react-intersection-observer"
-import { useTheme } from "next-themes"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -31,29 +29,31 @@ interface Transaction {
 }
 
 export default function TransactionsPage() {
-    const { theme } = useTheme()
-    const isDark = theme === "dark"
     const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()))
     const [endDate, setEndDate] = useState<Date>(new Date())
     const [transactions, setTransactions] = useState<Transaction[]>([])
-    const [page, setPage] = useState(1)
-    const [hasMore, setHasMore] = useState(true)
     const [loading, setLoading] = useState(false)
     const [transactionType, setTransactionType] = useState<'all' | 'credit' | 'debit'>('all')
 
-    const { ref, inView } = useInView({
-        threshold: 0,
-        triggerOnce: false
-    })
-
-    const fetchTransactions = async (pageNum: number, reset = false) => {
+    const fetchTransactions = async (reset = false) => {
         if (loading) return
         setLoading(true)
         try {
             const response = await fetchAllTransaction(transactionType, startDate, endDate)
-            const newTransactions = response.data?.transactions
-            setTransactions(prev => reset ? newTransactions : [...prev, ...newTransactions])
-            setHasMore(newTransactions?.length === 10)
+            const newTransactions = response.data?.transactions || []
+            
+            if (reset) {
+                // Reset: replace all transactions
+                setTransactions(newTransactions)
+            } else {
+                // Append: only add new transactions that don't already exist
+                setTransactions(prev => {
+                    const existingIds = new Set(prev.map((t: Transaction) => t._id))
+                    const uniqueNewTransactions = newTransactions.filter((t: Transaction) => !existingIds.has(t._id))
+                    return [...prev, ...uniqueNewTransactions]
+                })
+            }
+            
         } catch (error) {
             console.error('Error fetching transactions:', error)
         } finally {
@@ -61,21 +61,10 @@ export default function TransactionsPage() {
         }
     }
 
-    // Reset and fetch first page when filters change
+    // Reset and fetch when filters change
     useEffect(() => {
-        setPage(1)
-        setTransactions([])
-        fetchTransactions(1, true)
+        fetchTransactions(true)
     }, [startDate, endDate, transactionType])
-
-    // Load more when scrolling to bottom
-    useEffect(() => {
-        if (inView && hasMore && !loading) {
-            const nextPage = page + 1
-            setPage(nextPage)
-            fetchTransactions(nextPage)
-        }
-    }, [inView, hasMore, loading, page])
 
     const formatAmount = (amount: number) => {
         return new Intl.NumberFormat('en-IN', {
@@ -243,8 +232,6 @@ export default function TransactionsPage() {
                     <p className="text-muted-foreground">No transactions found</p>
                 </div>
             )}
-
-            <div ref={ref} className="h-4" />
         </div>
     )
 }

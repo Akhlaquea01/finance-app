@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './card';
 import { Skeleton } from './skeleton';
 import { fetchAiSuggestion } from '@/app/service/api.service';
+import { sessionCache } from '@/app/lib/session-cache';
 import dayjs from 'dayjs';
 
 const AISuggestionsCard: React.FC = () => {
@@ -22,12 +23,27 @@ const AISuggestionsCard: React.FC = () => {
     const getAiSuggetion = async () => {
         try {
             setLoading(true);
+            
+            // Check session cache first (API service will also check, but we can show cached data immediately)
+            const cacheKey = `ai_suggestions_${firstDay.format("YYYY-MM-DD")}_${lastDay.format("YYYY-MM-DD")}`;
+            const cachedData = sessionCache.get(cacheKey);
+            
+            if (cachedData?.suggestions) {
+                // Load from cache immediately
+                setSmartSuggestions(cachedData.suggestions?.smartSuggestions || [])
+                setSpendingPatterns(cachedData.suggestions?.spendingPatternsDetected || [])
+                setAccountOptimization(cachedData.suggestions?.accountOptimization || [])
+                setLoading(false);
+                return; // Don't make API call if we have cached data
+            }
+            
+            // If no cache, make API call (which will cache the result)
             const res = await fetchAiSuggestion({
               startDate: firstDay.format("YYYY-MM-DD"),
               endDate: lastDay.format("YYYY-MM-DD"),
             });
             setSmartSuggestions(res?.data?.suggestions?.smartSuggestions || [])
-            setSpendingPatterns(res?.data?.suggestions.spendingPatternsDetected || [])
+            setSpendingPatterns(res?.data?.suggestions?.spendingPatternsDetected || [])
             setAccountOptimization(res?.data?.suggestions?.accountOptimization || [])
         } catch (err) {
             console.log(err)

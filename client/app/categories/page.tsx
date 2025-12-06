@@ -108,18 +108,19 @@ export default function CategoriesPage() {
       </div>
 
       {loading ? (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array(8)
             .fill(0)
             .map((_, index) => (
-              <Card key={index} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <Skeleton className="h-5 w-5 rounded-full" />
-                    <Skeleton className="h-8 w-8 rounded-md" />
+              <Card key={index}>
+                <CardContent className="p-3 pl-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-5 w-16" />
+                    </div>
                   </div>
-                  <Skeleton className="h-5 w-32 mb-2" />
-                  <Skeleton className="h-4 w-20" />
                 </CardContent>
               </Card>
             ))}
@@ -135,92 +136,89 @@ export default function CategoriesPage() {
           }}
         />
       ) : (
-        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {categories.map((category) => (
             <Card
               key={category._id}
-              className="group relative overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 hover:border-primary/30 bg-gradient-to-br from-background via-background to-muted/30 backdrop-blur-sm"
+              className="group relative overflow-hidden hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 border hover:border-primary/20"
             >
-              {/* Top color accent bar with gradient */}
+              {/* Left color accent bar */}
               <div
-                className="absolute top-0 left-0 right-0 h-1.5"
+                className="absolute top-0 left-0 bottom-0 w-1"
                 style={{ 
-                  background: `linear-gradient(90deg, ${category.color}, ${category.color}dd)`
+                  backgroundColor: category.color
                 }}
               />
               
-              <CardContent className="p-6 pt-7">
-                <div className="flex items-start justify-between mb-5">
+              <CardContent className="p-3 pl-4">
+                <div className="flex items-center gap-3">
+                  {/* Icon on the left */}
                   <div
-                    className="h-14 w-14 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 relative overflow-hidden"
+                    className="h-10 w-10 rounded-lg flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200 flex-shrink-0"
                     style={{ 
-                      backgroundColor: category.color,
-                      boxShadow: `0 10px 30px 0 ${category.color}60`
+                      backgroundColor: category.color
                     }}
                   >
                     {category.icon ? (
-                      <span className="text-2xl drop-shadow-lg z-10 relative">{category.icon}</span>
+                      <span className="text-lg drop-shadow-sm">{category.icon}</span>
                     ) : (
-                      <Tag className="h-7 w-7 text-white drop-shadow-lg z-10 relative" />
+                      <Tag className="h-5 w-5 text-white drop-shadow-sm" />
                     )}
-                    <div 
-                      className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-40 blur-2xl transition-opacity duration-300"
-                      style={{ backgroundColor: category.color }}
-                    />
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-9 w-9 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-muted rounded-lg"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setEditCategory(category);
-                          setIsAddDialogOpen(true);
-                        }}
-                        className="cursor-pointer"
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteCategory(category._id)}
-                        className="text-red-600 focus:text-red-600 cursor-pointer"
-                      >
-                        <Trash className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                
-                <h3 className="font-bold text-lg mb-3.5 line-clamp-2 text-foreground group-hover:text-primary transition-colors duration-200 leading-tight min-h-[3.5rem]">
-                  {category.name}
-                </h3>
-                
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <Badge
-                    variant="outline"
-                    className={
-                      category.transactionType === "debit"
-                        ? "border-red-300 text-red-700 bg-red-50 dark:bg-red-950/30 dark:border-red-800 dark:text-red-400 font-semibold px-3 py-1 text-xs"
-                        : "border-green-300 text-green-700 bg-green-50 dark:bg-green-950/30 dark:border-green-800 dark:text-green-400 font-semibold px-3 py-1 text-xs"
-                    }
-                  >
-                    {category.transactionType === "debit" ? "Debit" : "Credit"}
-                  </Badge>
-                  {category.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-1 flex-1 min-w-0">
-                      {category.description}
-                    </p>
-                  )}
+                  
+                  {/* Name and badge on the right */}
+                  <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm text-foreground line-clamp-1 leading-tight">
+                        {category.name}
+                      </h3>
+                      <div className="mt-1">
+                        <Badge
+                          variant="outline"
+                          className={
+                            category.transactionType === "debit"
+                              ? "border-red-300 text-red-700 bg-red-50 dark:bg-red-950/30 dark:border-red-800 dark:text-red-400 font-medium px-2 py-0.5 text-xs"
+                              : "border-green-300 text-green-700 bg-green-50 dark:bg-green-950/30 dark:border-green-800 dark:text-green-400 font-medium px-2 py-0.5 text-xs"
+                          }
+                        >
+                          {category.transactionType === "debit" ? "Debit" : "Credit"}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {/* Menu button */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-muted rounded-md flex-shrink-0"
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditCategory(category);
+                            setIsAddDialogOpen(true);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteCategory(category._id)}
+                          className="text-red-600 focus:text-red-600 cursor-pointer"
+                        >
+                          <Trash className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </CardContent>
             </Card>

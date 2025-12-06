@@ -102,8 +102,6 @@ export function AddTransferModal({ open, onClose }: AddTransferModalProps) {
         isBillPayment: values.isBillPayment || false,
         txnDate: formattedDate, // Send date in YYYY-MM-DD format
       };
-
-      console.log('Transfer payload:', payload); // Debug log
       
       await createTransfer(payload);
       refreshData();
